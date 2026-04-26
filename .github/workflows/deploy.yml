@@ -1,0 +1,44 @@
+name: Deploy Static Site
+on:
+  workflow_dispatch:
+    inputs:
+      app_slug:
+        required: true
+        type: string
+      frontend_port:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, hetzner, production]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy static files
+        run: |
+          APP_SLUG="${{ inputs.app_slug }}"
+          PORT="${{ inputs.frontend_port }}"
+          TARGET_DIR="/apps/${APP_SLUG}"
+
+          mkdir -p "${TARGET_DIR}"
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            "${GITHUB_WORKSPACE}/" "${TARGET_DIR}/"
+
+          cat > "${TARGET_DIR}/docker-compose.yml" <<'COMPOSE'
+          version: '3.8'
+          services:
+            frontend:
+              image: nginx:alpine
+              ports:
+                - "${PORT}:80"
+              volumes:
+                - ./:/usr/share/nginx/html:ro
+              restart: unless-stopped
+          COMPOSE
+
+          cd "${TARGET_DIR}"
+          docker compose up -d --remove-orphans
