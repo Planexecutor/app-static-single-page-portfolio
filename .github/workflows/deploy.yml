@@ -14,13 +14,17 @@ jobs:
     runs-on: [self-hosted, hetzner, production]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Deploy static files
         run: |
           APP_SLUG="${{ inputs.app_slug }}"
           PORT="${{ inputs.frontend_port }}"
-          TARGET_DIR="/apps/${APP_SLUG}"
+          BASE_DIR="/opt/apps"
+          TARGET_DIR="${BASE_DIR}/${APP_SLUG}"
+
+          sudo mkdir -p "${BASE_DIR}"
+          sudo chown -R "$(id -u):$(id -g)" "${BASE_DIR}"
 
           mkdir -p "${TARGET_DIR}"
           rsync -av --delete \
